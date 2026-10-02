@@ -245,7 +245,7 @@ function draw(){
     secText.push((sec.label||(n+1))+") frets "+secFrets(sec.notes));
   });
   if(secDefs.length){
-    stxt.textContent=(chosen?"overlapping outlines alternate white and yellow; each shape has one note per string: ":"5 pentatonic positions - hover a shape to isolate it: ")+secText.join("   ");
+    stxt.textContent=(chosen?"overlapping outlines alternate white and yellow; each shape has one note per string: ":"5 pentatonic positions - hover a shape to isolate it"+(oth?" (the compared scale stays visible)":"")+": ")+secText.join("   ");
   }
   // notes
   for(var s2=0;s2<6;s2++){
@@ -273,8 +273,19 @@ function draw(){
   function setSectionHover(i){
     state.secHover=i;
     for(var k in noteEls){
-      var base=vset?(vset[k]?1:.2):1;
-      noteEls[k].setAttribute("opacity",i<0?base:(secEls[i].notes[k]?1:.1));
+      var vis;
+      if(i<0){
+        vis=vset?(vset[k]?1:.2):1;
+      }else if(secEls[i].notes[k]){
+        vis=1;
+      }else if(!vset&&oth){
+        // scales mode only: keep the compared scale visible while a position is isolated
+        var pr=k.split("|"), s=+pr[0], f=+pr[1], iv=(OPEN[s]+f-root+12)%12;
+        vis=oth.indexOf(iv)>=0?1:.1;
+      }else{
+        vis=.1;
+      }
+      noteEls[k].setAttribute("opacity",vis);
     }
     secEls.forEach(function(s,j){
       var on=i<0?null:j===i;
