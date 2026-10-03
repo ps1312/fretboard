@@ -1,12 +1,10 @@
-"use strict";
-const test = require("node:test");
-const assert = require("node:assert/strict");
-const P = require("../pentatonic.js");
-
-const { OPEN, NF, SCALE, pentShapes } = P;
+import { test } from "vitest";
+import assert from "node:assert/strict";
+import { OPEN, NF } from "../src/models/fretboard.js";
+import { SCALE, PENTPAT, pentShapes } from "../src/models/scales.js";
 
 function inScale(root, type, p) {
-  return SCALE[type].indexOf(((p - root) % 12 + 12) % 12) >= 0;
+  return SCALE[type].indexOf((((p - root) % 12) + 12) % 12) >= 0;
 }
 
 // The five standard movable positions, A minor, low->high fret.
@@ -98,8 +96,28 @@ test("C minor pentatonic Box5 is complete (regression for pattern E)", () => {
   }
 });
 
+test("octaves > 1 repeats the boxes on higher frets", () => {
+  const low = pentShapes(9, "minor", 1);
+  const both = pentShapes(9, "minor", 2);
+  assert.equal(low.length, 5);
+  assert.ok(both.length > low.length, "expected extra boxes up the neck");
+
+  const high = both.filter((b) => b.base >= 12);
+  assert.ok(high.length > 0, "expected at least one repeated box");
+  for (const b of high) {
+    assert.ok(b.base >= 12 && b.base <= NF, "repeated box sits in the higher frets");
+    for (const k in b.notes) {
+      const [s, f] = k.split("|").map(Number);
+      assert.ok(
+        inScale(9, "minor", OPEN[s] + f),
+        `repeated box ${b.label} has a non-scale note at string ${s} fret ${f}`
+      );
+    }
+  }
+});
+
 test("every shape has 12 notes (2 per string)", () => {
-  for (const [name, pat] of Object.entries(P.PENTPAT)) {
+  for (const [name, pat] of Object.entries(PENTPAT)) {
     const n = pat.reduce((a, o) => a + o.length, 0);
     assert.equal(n, 12, `shape ${name} should have 12 notes`);
   }
