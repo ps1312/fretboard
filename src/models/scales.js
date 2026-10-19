@@ -1,12 +1,14 @@
 // Scale / pattern model: the selectable scales plus the movable pentatonic boxes.
 import { OPEN, NF } from "./fretboard.js";
 
-// [name, intervals from the root, pentatonic type (if any)]
+// [name, intervals from the root, pentatonic type (pentatonics only), box anchor]
+// The box anchor is which pentatonic's five positions the boxes are built from.
 export const PATS = [
-  ["Minor pentatonic", [0, 3, 5, 7, 10], "minor"],
-  ["Major scale", [0, 2, 4, 5, 7, 9, 11]],
-  ["Natural minor scale", [0, 2, 3, 5, 7, 8, 10]],
-  ["Blues scale", [0, 3, 5, 6, 7, 10]],
+  ["Minor pentatonic", [0, 3, 5, 7, 10], "minor", "minor"],
+  ["Major pentatonic", [0, 2, 4, 7, 9], "major", "major"],
+  ["Major scale", [0, 2, 4, 5, 7, 9, 11], null, "major"],
+  ["Natural minor scale", [0, 2, 3, 5, 7, 8, 10], null, "minor"],
+  ["Blues scale", [0, 3, 5, 6, 7, 10], null, "minor"],
 ];
 
 // Pentatonic intervals, keyed by the two pentatonic types.
@@ -48,6 +50,31 @@ export function pentShapes(root, type, octaves) {
       if (maxF < 0) continue;
       out.push({ notes, minF, maxF, hasOpen: minF === 0, id: null, label: i + 1, shape: d[1], base });
     }
+  });
+  out.sort((a, b) => a.minF - b.minF || a.label - b.label);
+  return out;
+}
+
+// Movable scale boxes for any scale: the five pentatonic positions, each
+// extended with the scale's remaining notes. So every scale shares the same
+// five boxes, labelled 1-5, that repeat up the neck every octave.
+export function scaleShapes(root, anchor, intervals, octaves) {
+  const pcs = intervals.map((iv) => (root + iv) % 12);
+  const out = [];
+  pentShapes(root, anchor, octaves).forEach((p) => {
+    const notes = {};
+    let minF = 99, maxF = -1;
+    for (let s = 0; s < 6; s++) {
+      for (let f = p.minF; f <= p.maxF; f++) {
+        if (f < 0 || f > NF) continue;
+        if (pcs.indexOf((OPEN[s] + f) % 12) < 0) continue;
+        notes[s + "|" + f] = true;
+        minF = Math.min(minF, f);
+        maxF = Math.max(maxF, f);
+      }
+    }
+    if (maxF < 0) return;
+    out.push({ notes, minF, maxF, hasOpen: minF === 0, id: null, label: p.label, base: p.base });
   });
   out.sort((a, b) => a.minF - b.minF || a.label - b.label);
   return out;

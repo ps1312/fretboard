@@ -1,6 +1,6 @@
 // View / controller: renders the fretboard and wires up the controls.
 import { CIRCLE, PC, SHARP, FLAT, INT, INTFULL, noteNames } from "./models/notes.js";
-import { PATS, pentShapes } from "./models/scales.js";
+import { PATS, pentShapes, scaleShapes } from "./models/scales.js";
 import { CT, voicings, pickVoicings } from "./models/chords.js";
 import { OPEN, NF, NUT, END, TOP, GAP, fx } from "./models/fretboard.js";
 
@@ -140,8 +140,9 @@ function draw() {
       });
     }
   } else {
-    const ptype = PATS[state.pat][2];
-    if (ptype) { secDefs = pentShapes(root, ptype, 2); shp.hidden = false; }
+    const [, intervals, ptype, anchor] = PATS[state.pat];
+    secDefs = ptype ? pentShapes(root, ptype, 2) : scaleShapes(root, anchor, intervals, 2);
+    shp.hidden = false;
   }
 
   const secText = [];
@@ -164,7 +165,10 @@ function draw() {
     secText.push((sec.label || (n + 1)) + ") frets " + secFrets(sec.notes));
   });
   if (secDefs.length) {
-    stxt.textContent = (chosen ? "overlapping outlines alternate white and yellow; each shape has one note per string: " : "5 pentatonic positions - hover a shape to isolate it" + (oth ? " (the compared scale stays visible)" : "") + ": ") + secText.join("   ");
+    const seen = {};
+    secDefs.forEach((s) => { seen[s.label || 1] = true; });
+    const npos = Object.keys(seen).length;
+    stxt.textContent = (chosen ? "overlapping outlines alternate white and yellow; each shape has one note per string: " : npos + " positions - hover a shape to isolate it" + (oth ? " (the compared scale stays visible)" : "") + ": ") + secText.join("   ");
   }
 
   // notes
