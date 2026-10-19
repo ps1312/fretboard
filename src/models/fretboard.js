@@ -7,8 +7,8 @@ export const NF = 23;
 // SVG geometry: x of the nut, x of the last fret, y of the top string, gap between strings.
 export const NUT = 76;
 export const END = 1380;
-export const TOP = 34;
-export const GAP = 34;
+export const TOP = 30;
+export const GAP = 32;
 
 // x of fret wire n, uniform spacing.
 export function fx(n) {

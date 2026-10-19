@@ -20,10 +20,19 @@ label{display:flex;flex-direction:column;font-size:.8rem;color:var(--mut);gap:3p
 select,button{font:inherit;font-size:.95rem;padding:7px 10px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--fg)}
 button{cursor:pointer}
 button:hover{border-color:var(--acc)}
+:where(.ctl,.circle) button[aria-pressed="true"]{background:var(--acc);border-color:var(--acc);color:#fff}
 :focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 .circle{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
 .circle button{min-width:48px;padding:6px 8px}
 .circle button[aria-pressed="true"]{background:var(--acc);border-color:var(--acc);color:#fff}
+.boards .board{margin:0}
+#boards{display:none;line-height:0}
+#boards .board{margin-bottom:0;padding:2px}
+#boards .cap{padding:0 6px;line-height:1.2}
+.cap{display:flex;align-items:baseline;gap:8px;padding:2px 8px 0}
+.cap b{color:var(--acc);font-size:.95rem;font-weight:600}
+.cap small{color:var(--mut);font-size:.75rem}
+.hint{color:var(--mut);font-size:.95rem;margin:6px 10px}
 .board{overflow:hidden;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px}
 svg{display:block;width:100%;height:auto}
 .chords{margin-top:14px}
@@ -56,9 +65,13 @@ svg{display:block;width:100%;height:auto}
   <label>Labels
     <select id="lab"><option value="note">Note names</option><option value="int">Intervals (3m, 3M, 5)</option><option value="both">Note / Interval</option><option value="none">Dots only</option></select>
   </label>
+  <label>&nbsp;
+    <button id="prog" type="button" aria-pressed="false">Progression: off</button>
+  </label>
 </div>
 
-<div class="board"><svg id="fb" viewBox="0 0 1400 270" role="img" aria-label="Guitar fretboard"></svg></div>
+<div id="board1" class="board"><svg id="fb" viewBox="0 0 1400 220" role="img" aria-label="Guitar fretboard"></svg></div>
+<div id="boards"></div>
 <div class="chords"><h2 id="chh">Chords</h2><div class="chips" id="chips"></div></div>
 <p class="info" id="info"></p>
 </main>
