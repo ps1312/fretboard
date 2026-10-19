@@ -30,7 +30,7 @@ export function voicings(root, rv, tones) {
         }
         const fr = [-1, -1, -1, -1, -1, -1];
         cur.forEach((f, j) => { fr[a + j] = f; });
-        const op = cur.indexOf(0) >= 0, topRoot = ((OPEN[a] + cur[0]) % 12 - root + 12) % 12 === 0;
+        const op = cur.indexOf(0) >= 0, topRoot = ((OPEN[a] + cur[0]) % 12 - rv + 12) % 12 === 0;
         res.push({ fr, cnt: cur.length, op, topRoot, lo: op ? 0 : (lo === 99 ? 0 : lo), hi: hi < 0 ? 0 : hi });
         return;
       }

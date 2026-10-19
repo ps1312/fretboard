@@ -8,6 +8,8 @@ export const PATS = [
   ["Major pentatonic", [0, 2, 4, 7, 9], "major", "major"],
   ["Major scale", [0, 2, 4, 5, 7, 9, 11], null, "major"],
   ["Natural minor scale", [0, 2, 3, 5, 7, 8, 10], null, "minor"],
+  ["Harmonic minor scale", [0, 2, 3, 5, 7, 8, 11], null, "minor"],
+  ["Melodic minor scale", [0, 2, 3, 5, 7, 9, 10], null, "minor"],
   ["Blues scale", [0, 3, 5, 6, 7, 10], null, "minor"],
 ];
 
