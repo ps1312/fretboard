@@ -117,6 +117,7 @@ function draw() {
   let vset = null, noteEls = {}, secEls = [];
   let secDefs = [];
   if (chosen) {
+    vset = {};
     const picked = pickVoicings(voicings(root, chosen.rv, chosen.tones));
     picked.forEach((v) => {
       const notes = {};
