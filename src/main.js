@@ -1,10 +1,10 @@
 // View / controller: renders the fretboard and wires up the controls.
-import { CIRCLE, PC, SHARP, FLAT, INT, INTFULL, noteNames } from "./models/notes.js";
+import { CIRCLE, PC, SHARP, FLAT, INT, INTFULL, IVCOL, IVSTK, IVTXT, noteNames } from "./models/notes.js";
 import { PATS, pentShapes, scaleShapes } from "./models/scales.js";
 import { CT, voicings, pickVoicings } from "./models/chords.js";
 import { OPEN, NF, NUT, END, TOP, GAP, fx } from "./models/fretboard.js";
 
-const state = { key: "C", pat: 0, chord: null, shape: 0, secHover: -1, secFocus: -1 };
+const state = { key: "C", pat: 0, chord: null, shape: 0, secHover: -1, secFocus: -1, noteIv: null, noteK: null };
 let lastChipSig = null;
 
 const circle = document.getElementById("circle");
@@ -48,21 +48,13 @@ function el(t, a, txt) {
   return e;
 }
 
-function secFrets(notes) {
-  const a = [];
-  for (let s = 5; s >= 0; s--) {
-    const fs = [];
-    for (let f = 0; f <= NF; f++) if (notes[s + "|" + f]) fs.push(f);
-    a.push(fs.length ? fs.join(" ") : "x");
-  }
-  return a.join("  ");
-}
-
 function draw() {
   const svg = document.getElementById("fb");
   svg.innerHTML = "";
   state.secFocus = -1;
   state.secHover = -1;
+  state.noteIv = null;
+  state.noteK = null;
   const root = PC[state.key];
   const base = PATS[state.pat][1];
   const ci = +cmp.value;
@@ -123,29 +115,19 @@ function draw() {
   });
 
   let vset = null, noteEls = {}, secEls = [];
-  const shp = document.getElementById("shapes");
-  shp.hidden = true;
   let secDefs = [];
-  const stxt = document.getElementById("stxt");
   if (chosen) {
     const picked = pickVoicings(voicings(root, chosen.rv, chosen.tones));
-    shp.hidden = false;
-    if (!picked.length) stxt.textContent = "No shape of this chord fits within 4 frets";
-    else {
-      vset = {};
-      picked.forEach((v) => {
-        const notes = {};
-        v.fr.forEach((f, si) => { if (f >= 0) { vset[si + "|" + f] = true; notes[si + "|" + f] = true; } });
-        secDefs.push({ notes, minF: v.lo, maxF: v.hi, hasOpen: v.op, id: chosen.id });
-      });
-    }
+    picked.forEach((v) => {
+      const notes = {};
+      v.fr.forEach((f, si) => { if (f >= 0) { vset[si + "|" + f] = true; notes[si + "|" + f] = true; } });
+      secDefs.push({ notes, minF: v.lo, maxF: v.hi, hasOpen: v.op, id: chosen.id });
+    });
   } else {
     const [, intervals, ptype, anchor] = PATS[state.pat];
     secDefs = ptype ? pentShapes(root, ptype, 2) : scaleShapes(root, anchor, intervals, 2);
-    shp.hidden = false;
   }
 
-  const secText = [];
   secDefs.forEach((sec, n) => {
     let top = 99, bot = -1;
     for (const k in sec.notes) { const si = +k.split("|")[0]; if (si < top) top = si; if (si > bot) bot = si; }
@@ -162,14 +144,7 @@ function draw() {
     hit.addEventListener("mouseenter", () => { state.secHover = idx; refreshSectionHighlight(); });
     hit.addEventListener("mouseleave", () => { state.secHover = -1; refreshSectionHighlight(); });
     hit.addEventListener("click", () => { state.secFocus = state.secFocus === idx ? -1 : idx; state.secHover = -1; refreshSectionHighlight(); });
-    secText.push((sec.label || (n + 1)) + ") frets " + secFrets(sec.notes));
   });
-  if (secDefs.length) {
-    const seen = {};
-    secDefs.forEach((s) => { seen[s.label || 1] = true; });
-    const npos = Object.keys(seen).length;
-    stxt.textContent = (chosen ? "overlapping outlines alternate white and yellow; each shape has one note per string: " : npos + " positions - hover a shape to isolate it" + (oth ? " (the compared scale stays visible)" : "") + ": ") + secText.join("   ");
-  }
 
   // notes
   for (let s2 = 0; s2 < 6; s2++) {
@@ -178,19 +153,23 @@ function draw() {
       if (pc.indexOf(iv) < 0) continue;
       const x = f === 0 ? NUT - 30 : (fx(f - 1) + fx(f)) / 2, y = TOP + s2 * GAP, isRoot = iv === 0;
       const inCh = vset ? !!vset[s2 + "|" + f] : false;
-      const g = el("g", { opacity: vset ? (inCh ? 1 : 0.2) : 1, "pointer-events": "none" });
+      const g = el("g", { opacity: vset ? (inCh ? 1 : 0.2) : 1, "pointer-events": "all", cursor: "pointer" });
       noteEls[s2 + "|" + f] = g;
+      g.addEventListener("mouseenter", () => { state.noteIv = iv; state.noteK = s2 + "|" + f; refreshSectionHighlight(); });
+      g.addEventListener("mouseleave", () => { if (state.noteIv === iv) { state.noteIv = null; state.noteK = null; } refreshSectionHighlight(); });
       let st = "same";
+      let stk = IVSTK[iv];
       if (oth) { const inB = base.indexOf(iv) >= 0, inO = oth.indexOf(iv) >= 0; st = inB && inO ? "same" : inO ? "added" : "removed"; }
-      const fill = isRoot ? "#e8a33d" : st === "added" ? "#8e5bd6" : st === "removed" ? "#4a2c1d" : "#2f7d79";
-      let stk = isRoot ? "#7a4a0a" : st === "added" ? "#4b2a85" : st === "removed" ? "#e58a8a" : "#16403d";
+      const fo = st === "removed" ? 0.25 : null, fill = IVCOL[iv];
+      stk = st === "removed" ? IVCOL[iv] : st === "added" ? "#4b2a85" : IVSTK[iv];
       const dash = st === "removed" ? "4 3" : "none";
       let sw = 1.5;
       if (inCh) { stk = "#fff"; sw = 3.5; }
-      if (labels === "both") g.appendChild(el("rect", { x: x - 23, y: y - 14, width: 46, height: 28, rx: 14, fill, stroke: stk, "stroke-width": sw, "stroke-dasharray": dash }));
-      else g.appendChild(el("circle", { cx: x, cy: y, r: 15, fill, stroke: stk, "stroke-width": sw, "stroke-dasharray": dash }));
+      const shp2 = { fill, stroke: stk, "stroke-width": sw, "stroke-dasharray": dash, ...(fo != null ? { "fill-opacity": fo } : {}) };
+      if (labels === "both") g.appendChild(el("rect", { x: x - 23, y: y - 14, width: 46, height: 28, rx: 14, ...shp2 }));
+      else g.appendChild(el("circle", { cx: x, cy: y, r: 15, ...shp2 }));
       const t = labels === "note" ? names[p] : labels === "int" ? INT[iv] : names[p] + "/" + INT[iv];
-      if (labels !== "none") g.appendChild(el("text", { x, y: y + 4, "text-anchor": "middle", "font-size": labels === "both" ? 10 : labels === "int" ? 12 : 14, "font-weight": 600, fill: isRoot ? "#2a1a05" : "#fff" }, t));
+      if (labels !== "none") g.appendChild(el("text", { x, y: y + 4, "text-anchor": "middle", "font-size": labels === "both" ? 10 : labels === "int" ? 12 : 14, "font-weight": 600, fill: st === "removed" ? "#f0e8dc" : IVTXT[iv] }, t));
       svg.appendChild(g);
     }
   }
@@ -202,6 +181,22 @@ function draw() {
   }
 
   function applySectionHighlight(i) {
+    if (state.noteIv != null) {
+      let secIdx = null;
+      for (let j = 0; j < secEls.length; j++) if (secEls[j].notes[state.noteK]) { secIdx = j; break; }
+      for (const k in noteEls) {
+        let vis;
+        if (secIdx != null && !secEls[secIdx].notes[k]) {
+          if (vset) vis = vset[k] ? 1 : 0.2;
+          else if (oth) { const pr = k.split("|"), s = +pr[0], f = +pr[1], iv = (OPEN[s] + f - root + 12) % 12; vis = oth.indexOf(iv) >= 0 ? 0.3 : 0.1; }
+          else vis = 0.1;
+        } else {
+          const pr = k.split("|"), s = +pr[0], f = +pr[1], iv = (OPEN[s] + f - root + 12) % 12;
+          vis = iv === state.noteIv ? 1 : 0.3;
+        }
+        noteEls[k].setAttribute("opacity", vis);
+      }
+    } else {
     for (const k in noteEls) {
       let vis;
       if (i < 0) {
@@ -216,6 +211,7 @@ function draw() {
         vis = 0.1;
       }
       noteEls[k].setAttribute("opacity", vis);
+    }
     }
     secEls.forEach((s, j) => {
       const on = i < 0 ? null : j === i;
@@ -233,7 +229,7 @@ function draw() {
 
   const nn = pc.map((i) => names[(root + i) % 12]).join("  ");
   const nxt = CIRCLE[(CIRCLE.indexOf(state.key) + 1) % 12];
-  document.getElementById("info").innerHTML = "<b>" + state.key + " " + PATS[state.pat][0].toLowerCase() + "</b>: " + nn + ".<br>Intervals: " + pc.map((i) => INTFULL[i]).join(", ") + "." + (oth ? "<br>Compared with <b>" + PATS[ci][0].toLowerCase() + "</b>: <span style=\"color:#8e5bd6\"><b>added</b></span> " + (oth.filter((i) => base.indexOf(i) < 0).map((i) => INTFULL[i]).join(", ") || "nothing") + "; <span style=\"color:#d97a7a\"><b>removed</b></span> " + (base.filter((i) => oth.indexOf(i) < 0).map((i) => INTFULL[i]).join(", ") || "nothing") + ". Purple = only in the compared pattern, dashed outline = only in the first." : "") + "<br>Next key in the circle: <b>" + nxt + "</b>.";
+  document.getElementById("info").innerHTML = "<b>" + state.key + " " + PATS[state.pat][0].toLowerCase() + "</b>: " + nn + ".<br>Intervals: " + pc.map((i) => "<span style=\"color:" + IVCOL[i] + "\"><b>" + INTFULL[i] + "</b></span>").join(", ") + "." + (oth ? "<br>Compared with <b>" + PATS[ci][0].toLowerCase() + "</b>: <span style=\"color:#8e5bd6\"><b>added</b></span> " + (oth.filter((i) => base.indexOf(i) < 0).map((i) => INTFULL[i]).join(", ") || "nothing") + "; <span style=\"color:#d97a7a\"><b>removed</b></span> " + (base.filter((i) => oth.indexOf(i) < 0).map((i) => INTFULL[i]).join(", ") || "nothing") + ". Purple border = only in the compared pattern, dashed outline = only in the first." : "") + "<br>Next key in the circle: <b>" + nxt + "</b>.";
 }
 
 draw();
