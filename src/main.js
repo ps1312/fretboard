@@ -146,12 +146,12 @@ function renderBoard(svg, cfg) {
         if (i < 0) {
           vis = vset ? (vset[k] ? 1 : 0.2) : 1;
         } else if (secEls[i].notes[k]) {
-          vis = 1;
+          vis = vset ? (vset[k] ? 1 : 0.2) : 1;
         } else if (!vset && oth) {
           const pr = k.split("|"), s = +pr[0], f = +pr[1], iv = (OPEN[s] + f - root + 12) % 12;
           vis = oth.indexOf(iv) >= 0 ? 1 : 0.1;
         } else {
-          vis = 0.1;
+          vis = vset && vset[k] ? 0.3 : 0.1;
         }
         noteEls[k].setAttribute("opacity", vis);
       }
@@ -196,7 +196,7 @@ function draw() {
   state.chords = state.chords.filter((id) => list.some((c) => c.id === id));
   chh.textContent = pc.length > 8 ? "Chords (not shown for this many notes)"
     : state.prog ? "Chords made only from these notes - tap chips to build a progression, one board per chord"
-    : "Chords made only from these notes" + (oth ? " (purple border = uses an added note)" : "") + " - tap one, then hover a shape on the fretboard to isolate it";
+    : "Chords made only from these notes" + (oth ? " (purple border = uses an added note)" : "") + " - tap one to highlight it inside the scale boxes";
   const chipSig = state.key + "|" + state.pat + "|" + cmp.value + "|" + pc.join(",");
   const rebuild = chipSig !== lastChipSig;
   lastChipSig = chipSig;
@@ -230,26 +230,26 @@ function draw() {
   board1.style.display = state.prog ? "none" : "block";
   boards.style.display = state.prog ? "block" : "none";
 
-  function chordDefs(c) {
+  // The boxes always come from the scale; a chord, when chosen, is shown as
+  // highlighted notes inside those boxes, not as boxes of its own.
+  function scaleSecDefs() {
+    const [, intervals, ptype, anchor] = PATS[state.pat];
+    return ptype ? pentShapes(root, ptype, 2) : scaleShapes(root, anchor, intervals, 2);
+  }
+
+  function chordVset(c) {
     const picked = pickVoicings(voicings(root, c.rv, c.tones));
-    const vset = {}, secDefs = [];
+    const vset = {};
     picked.forEach((v) => {
-      const notes = {};
-      v.fr.forEach((f, si) => { if (f >= 0) { vset[si + "|" + f] = true; notes[si + "|" + f] = true; } });
-      secDefs.push({ notes, minF: v.lo, maxF: v.hi, hasOpen: v.op, id: c.id });
+      v.fr.forEach((f, si) => { if (f >= 0) vset[si + "|" + f] = true; });
     });
-    return { vset, secDefs };
+    return vset;
   }
 
   if (!state.prog) {
-    let vset = null, secDefs = [];
     const chosen = byId[state.chords[0]];
-    if (chosen) {
-      ({ vset, secDefs } = chordDefs(chosen));
-    } else {
-      const [, intervals, ptype, anchor] = PATS[state.pat];
-      secDefs = ptype ? pentShapes(root, ptype, 2) : scaleShapes(root, anchor, intervals, 2);
-    }
+    const vset = chosen ? chordVset(chosen) : null;
+    const secDefs = scaleSecDefs();
     renderBoard(document.getElementById("fb"), { root, names, labels, pc, base, oth, vset, secDefs });
   } else {
     boards.innerHTML = "";
@@ -267,8 +267,8 @@ function draw() {
       wrap.appendChild(cap);
       wrap.appendChild(mini);
       boards.appendChild(wrap);
-      const { vset, secDefs } = chordDefs(c);
-      renderBoard(mini, { root, names, labels, pc, base, oth, vset, secDefs });
+      const vset = chordVset(c);
+      renderBoard(mini, { root, names, labels, pc, base, oth, vset, secDefs: scaleSecDefs() });
     });
   }
 
