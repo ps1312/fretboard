@@ -12,17 +12,18 @@ export const CT = [
   ["m7b5", [0, 3, 6, 10]],
 ];
 
-// Playable shapes: one note per string, adjacent strings, root in the bass,
-// fretted notes within 4 frets. Shapes with the root in the top voice are
-// preferred, since that is how these chords are commonly voiced.
-export function voicings(root, rv, tones) {
+// Playable shapes: one note per string, adjacent strings, fretted notes within
+// 4 frets. Shapes with the root in the top voice are preferred, since that is
+// how these chords are commonly voiced. With `inv`, inversions are allowed
+// too: the top voice no longer has to be the root.
+export function voicings(root, rv, tones, inv) {
   const res = [];
   for (let a = 0; a < 6; a++) for (let b = a + 2; b < 6; b++) (function (a, b) {
     const cur = [];
     (function dfs(s, lo, hi) {
       if (s > b) {
         if (hi > 4 && cur.indexOf(0) >= 0) return;
-        if (((OPEN[b] + cur[b - a]) % 12 - root + 12) % 12 !== rv) return;
+        if (!inv && ((OPEN[b] + cur[b - a]) % 12 - root + 12) % 12 !== rv) return;
         for (let i = 0; i < tones.length; i++) {
           let ok = false;
           for (let j = 0; j < cur.length; j++) if (((OPEN[a + j] + cur[j]) % 12 - root + 12) % 12 === tones[i]) ok = true;

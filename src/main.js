@@ -4,7 +4,7 @@ import { PATS, pentShapes, scaleShapes } from "./models/scales.js";
 import { CT, voicings, pickVoicings } from "./models/chords.js";
 import { OPEN, NF, NUT, END, TOP, GAP, fx } from "./models/fretboard.js";
 
-const state = { key: "C", pat: 0, chords: [], prog: false };
+const state = { key: "C", pat: 0, chords: [], prog: false, triads: false };
 let lastChipSig = null;
 
 const circle = document.getElementById("circle");
@@ -12,6 +12,7 @@ const pat = document.getElementById("pat");
 const cmp = document.getElementById("cmp");
 const lab = document.getElementById("lab");
 const progBtn = document.getElementById("prog");
+const triBtn = document.getElementById("tri");
 
 CIRCLE.forEach((k) => {
   const b = document.createElement("button");
@@ -45,6 +46,11 @@ lab.onchange = draw;
 progBtn.onclick = () => {
   state.prog = !state.prog;
   if (!state.prog) state.chords = state.chords.slice(0, 1);
+  draw();
+};
+
+triBtn.onclick = () => {
+  state.triads = !state.triads;
   draw();
 };
 
@@ -182,6 +188,8 @@ function draw() {
   });
   progBtn.setAttribute("aria-pressed", state.prog ? "true" : "false");
   progBtn.textContent = "Progression: " + (state.prog ? "on" : "off");
+  triBtn.setAttribute("aria-pressed", state.triads ? "true" : "false");
+  triBtn.textContent = "Triads: " + (state.triads ? "on" : "off");
 
   const chips = document.getElementById("chips"), chh = document.getElementById("chh");
   let list = [];
@@ -196,7 +204,7 @@ function draw() {
   state.chords = state.chords.filter((id) => list.some((c) => c.id === id));
   chh.textContent = pc.length > 8 ? "Chords (not shown for this many notes)"
     : state.prog ? "Chords made only from these notes - tap chips to build a progression, one board per chord"
-    : "Chords made only from these notes" + (oth ? " (purple border = uses an added note)" : "") + " - tap one to highlight it inside the scale boxes";
+    : "Chords made only from these notes" + (oth ? " (purple border = uses an added note)" : "") + " - tap one to highlight it inside the scale boxes" + (state.triads ? " (triads: all inversions)" : "");
   const chipSig = state.key + "|" + state.pat + "|" + cmp.value + "|" + pc.join(",");
   const rebuild = chipSig !== lastChipSig;
   lastChipSig = chipSig;
@@ -238,7 +246,7 @@ function draw() {
   }
 
   function chordVset(c) {
-    const picked = pickVoicings(voicings(root, c.rv, c.tones));
+    const picked = pickVoicings(voicings(root, c.rv, c.tones, state.triads));
     const vset = {};
     picked.forEach((v) => {
       v.fr.forEach((f, si) => { if (f >= 0) vset[si + "|" + f] = true; });
